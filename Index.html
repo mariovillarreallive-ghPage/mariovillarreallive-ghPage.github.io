@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Gestión Comercial - Demo Interactiva</title>
+    <!-- Integración de Chart.js para las gráficas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #0A58D0; --sidebar-bg: #1A253C; --background-color: #F4F7FC; --white: #FFFFFF;
+            --text-color: #1A253C; --text-secondary: #5F6E8B; --border-color: #E0E7F1;
+            --shadow: 0 4px 10px rgba(0, 0, 0, 0.05); --green: #17B26A; --red: #D92D20;
+            --blue-light: #EFF4FF; --orange: #F79009;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background-color: var(--background-color); color: var(--text-color); display: flex; }
+        .sidebar { width: 240px; background-color: var(--sidebar-bg); color: #A7B4D1; display: flex; flex-direction: column; height: 100vh; position: fixed; flex-shrink: 0; }
+        .sidebar-header { padding: 24px; font-size: 28px; font-weight: bold; color: var(--white); text-align: center; border-bottom: 1px solid #33415C; }
+        .sidebar-nav { list-style-type: none; padding: 20px 0; margin: 0; flex-grow: 1; }
+        .sidebar-nav li a { display: flex; align-items: center; padding: 15px 25px; text-decoration: none; color: #A7B4D1; font-weight: 500; transition: all 0.2s ease; cursor: pointer; }
+        .sidebar-nav li a .icon { margin-right: 15px; font-size: 20px; }
+        .sidebar-nav li a.active, .sidebar-nav li a:hover { background-color: var(--primary-color); color: var(--white); border-left: 4px solid var(--blue-light); padding-left: 21px; }
+        .sidebar-footer { padding: 20px; border-top: 1px solid #33415C; display: flex; align-items: center; }
+        .sidebar-footer img { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; }
+        .user-info .name { font-weight: bold; color: var(--white); }
+        .user-info .role { font-size: 0.8rem; }
+        .main-content { margin-left: 240px; flex-grow: 1; display: none; }
+        .main-content.active { display: block; }
+        .content-wrapper { padding: 30px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background-color 0.2s; }
+        .btn-primary { background-color: var(--primary-color); color: var(--white); }
+        .btn-primary:hover { background-color: #084eb3; }
+        .btn-secondary { background-color: var(--white); color: var(--text-color); border: 1px solid var(--border-color); }
+        .btn-secondary:hover { background-color: #f2f2f2; }
+        .card { background-color: var(--white); border-radius: 8px; box-shadow: var(--shadow); padding: 25px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card-title { font-size: 1.1rem; font-weight: 600; margin: 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background-color: #F9FAFB; font-weight: 600; color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .kpi-card { display: flex; align-items: center; }
+        .kpi-icon { font-size: 24px; padding: 15px; border-radius: 50%; margin-right: 20px; color: var(--primary-color); }
+        .kpi-info .value { font-size: 2rem; font-weight: 700; }
+        .kpi-info .label { color: var(--text-secondary); }
+        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; margin-bottom: 30px; }
+        #valorInventarioChart, #inventarioCategoriaChart { max-height: 280px; }
+        .search-container { position: relative; width: 350px; }
+        .search-container input { width: 100%; padding: 10px 15px 10px 40px; border: 1px solid var(--border-color); border-radius: 6px; }
+        .status { padding: 5px 10px; border-radius: 12px; font-weight: 600; font-size: 0.8rem; }
+        .status-active { background-color: #E9FBF0; color: #269A52; }
+        .status-inactive { background-color: #FEF3F2; color: #D92D20; }
+        .actions button { background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 18px; }
+
+        /* Modal Styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background-color: var(--white); padding: 30px; border-radius: 8px; width: 90%; max-width: 650px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px; }
+        .modal-header h2 { margin: 0; }
+        .modal-header .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary); }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-group label { margin-bottom: 8px; font-weight: 500; font-size: 0.9rem; }
+        .form-group input, .form-group select, .form-group textarea { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; width: 100%; box-sizing: border-box; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+        .error-message { color: var(--red); font-size: 0.8rem; margin-top: 5px; display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- ======================== SIDEBAR ======================== -->
+    <aside class="sidebar">
+        <div class="sidebar-header">AV</div>
+        <ul class="sidebar-nav">
+            <li><a class="nav-link active" data-target="dashboard"><span class="icon">📊</span> Dashboard</a></li>
+            <li><a class="nav-link" data-target="catalogo"><span class="icon">📦</span> Catálogo</a></li>
+            <li><a class="nav-link" data-target="entradas"><span class="icon">📥</span> Entradas</a></li>
+            <li><a class="nav-link" data-target="salidas"><span class="icon">📤</span> Salidas</a></li>
+            <li><a class="nav-link" data-target="reportes"><span class="icon">📄</span> Reportes</a></li>
+        </ul>
+        <div class="sidebar-footer">
+            <img src="https://i.pravatar.cc/40?u=carlosruiz" alt="User Avatar">
+            <div class="user-info"><div class="name">Carlos Ruiz</div><div class="role">Administrador</div></div>
+        </div>
+    </aside>
+
+    <!-- ======================== DASHBOARD ======================== -->
+    <div id="dashboard" class="main-content active">
+        <div class="content-wrapper">
+            <header class="header"><h1>Dashboard Inventario</h1></header>
+            <div class="kpi-grid">
+                <div class="card kpi-card"><div class="kpi-icon">📦</div><div class="kpi-info"><div class="value">2,845</div><div class="label">Stock Total</div></div></div>
+                <div class="card kpi-card"><div class="kpi-icon">📋</div><div class="kpi-info"><div class="value">1,236</div><div class="label">Equipos Comprometidos</div></div></div>
+                <div class="card kpi-card"><div class="kpi-icon">⚠️</div><div class="kpi-info"><div class="value">128</div><div class="label">Bajo Stock</div></div></div>
+                <div class="card kpi-card"><div class="kpi-icon">🚚</div><div class="kpi-info"><div class="value">89</div><div class="label">En Tránsito</div></div></div>
+            </div>
+            <div class="dashboard-grid">
+                <div class="card"><div class="card-header"><h3 class="card-title">Valor de Inventario</h3></div><canvas id="valorInventarioChart"></canvas></div>
+                <div class="card"><div class="card-header"><h3 class="card-title">Inventario por Categoría</h3></div><canvas id="inventarioCategoriaChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ======================== CATALOGO ======================== -->
+    <div id="catalogo" class="main-content">
+        <div class="content-wrapper">
+            <header class="header"><h1>Catálogo de Artículos</h1><button id="addArticleBtn" class="btn btn-primary">➕ Nuevo Artículo</button></header>
+            <div class="card">
+                <div class="card-header"><div class="search-container"><input id="searchInput" type="text" placeholder="Buscar por SKU, descripción o marca..."></div></div>
+                <table><thead><tr><th>SKU</th><th>Descripción</th><th>Categoría</th><th>Marca</th><th>Stock</th><th>Estatus</th><th>Acciones</th></tr></thead><tbody id="articlesTableBody"></tbody></table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ======================== ENTRADAS ======================== -->
+    <div id="entradas" class="main-content">
+       <div class="content-wrapper">
+            <header class="header"><h1>Entradas de Inventario</h1><button id="addEntradaBtn" class="btn btn-primary">➕ Nueva Entrada</button></header>
+            <div class="card"><div class="card-header"><h3 class="card-title">Historial de Entradas</h3></div>
+                 <table><thead><tr><th>Proveedor</th><th>Factura / OC</th><th>Fecha</th><th>Almacén</th><th>Importe</th></tr></thead>
+                    <tbody>
+                        <tr><td>Grupo Electro S.A.</td><td>FAC-2026-0785</td><td>05/06/2026</td><td>Bodega Monterrey</td><td>$ 56,492.00</td></tr>
+                        <tr><td>Music World</td><td>FAC-2026-0780</td><td>02/06/2026</td><td>Bodega CDMX</td><td>$ 12,800.00</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================== SALIDAS ======================== -->
+    <div id="salidas" class="main-content">
+        <div class="content-wrapper">
+            <header class="header"><h1>Salidas de Inventario</h1><button id="addSalidaBtn" class="btn btn-primary">➕ Nueva Salida</button></header>
+            <div class="card"><div class="card-header"><h3 class="card-title">Historial de Salidas a Proyecto</h3></div>
+                <table><thead><tr><th>Proyecto</th><th>Responsable</th><th>Fecha</th><th>Almacén</th><th>Motivo</th></tr></thead>
+                    <tbody>
+                        <tr><td>PROY-2026-015 - Sala MTY</td><td>Carlos Ruiz</td><td>05/06/2026</td><td>Bodega Monterrey</td><td>Instalación</td></tr>
+                        <tr><td>PROY-2026-014 - Auditorio</td><td>Jorge Martinez</td><td>01/06/2026</td><td>Bodega CDMX</td><td>Instalación</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================== REPORTES ======================== -->
+    <div id="reportes" class="main-content">
+        <div class="content-wrapper">
+            <header class="header"><h1>Reportes</h1></header>
+            <div class="card"><div class="card-header"><h3 class="card-title">Reportes de Inventario Disponibles</h3></div>
+                <table><thead><tr><th>Nombre del Reporte</th><th>Descripción</th><th>Acción</th></tr></thead>
+                    <tbody>
+                        <tr><td>Inventario Valorado</td><td>Valor total del inventario por costo y precio de venta.</td><td><a href="#">Generar</a></td></tr>
+                        <tr><td>Rotación de Inventario</td><td>Análisis de la frecuencia con la que se vende el inventario.</td><td><a href="#">Generar</a></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ======================== MODALS ======================== -->
+    <div id="addArticleModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Nuevo Artículo</h2><button class="close-btn">&times;</button></div>
+            <form id="addArticleForm">
+                <div class="form-grid">
+                    <div class="form-group full-width"><label for="descripcion">Descripción</label><input type="text" id="descripcion" required><div class="error-message">Campo obligatorio.</div></div>
+                    <div class="form-group"><label for="sku">SKU</label><input type="text" id="sku" required><div class="error-message">Campo obligatorio y único.</div></div>
+                    <div class="form-group"><label for="marca">Marca</label><input type="text" id="marca" required><div class="error-message">Campo obligatorio.</div></div>
+                    <div class="form-group"><label for="categoria">Categoría</label><select id="categoria" required><option value="">Seleccione...</option><option>Audio</option><option>Video</option><option>Pantallas LED</option><option>Cableado</option><option>Accesorios</option></select><div class="error-message">Campo obligatorio.</div></div>
+                    <div class="form-group"><label for="stock">Stock Inicial</label><input type="number" id="stock" value="0" min="0" required><div class="error-message">Debe ser >= 0.</div></div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary close-btn">Cancelar</button><button type="submit" class="btn btn-primary">Guardar Artículo</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addEntradaModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Nueva Entrada de Inventario</h2><button class="close-btn">&times;</button></div>
+            <form><div class="form-grid">
+                    <div class="form-group"><label>Proveedor</label><input type="text" value="Grupo Electro S.A."></div>
+                    <div class="form-group"><label>Factura / OC</label><input type="text" value="FAC-2026-0785"></div>
+                    <div class="form-group"><label>Fecha</label><input type="date" value="2026-06-05"></div>
+                    <div class="form-group"><label>Almacén</label><select><option>Bodega Monterrey</option></select></div>
+                </div>
+                <!-- Simple table for items -->
+                <div class="modal-footer"><button type="button" class="btn btn-secondary close-btn">Cancelar</button><button type="submit" class="btn btn-primary">Guardar Entrada</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addSalidaModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Nueva Salida a Proyecto</h2><button class="close-btn">&times;</button></div>
+            <form><div class="form-grid">
+                    <div class="form-group"><label>Proyecto</label><select><option>PROY-2026-015 - Sala Corporativa MTY</option></select></div>
+                    <div class="form-group"><label>Responsable</label><input type="text" value="Carlos Ruiz" readonly></div>
+                </div>
+                <div class="form-group full-width" style="margin-top: 20px;"><label>Observaciones</label><textarea rows="3">Entrega para montaje de sala principal.</textarea></div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary close-btn">Cancelar</button><button type="submit" class="btn btn-primary">Generar Salida</button></div>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DATA MOCK ---
+        const articles = [
+            { sku: 'AUD-100', desc: 'Mezcladora Yamaha MG10XU', cat: 'Audio', marca: 'Yamaha', stock: 12, status: 'Activo' },
+            { sku: 'AUD-200', desc: 'Bocina JBL EON615', cat: 'Audio', marca: 'JBL', stock: 8, status: 'Activo' },
+            { sku: 'AUD-350', desc: 'Micrófono Shure SM58', cat: 'Audio', marca: 'Shure', stock: 35, status: 'Activo' },
+            { sku: 'VID-220', desc: 'Cámara PTZ Sony SRG-X400', cat: 'Video', marca: 'Sony', stock: 4, status: 'Activo' },
+            { sku: 'VID-310', desc: 'Switcher de Video ATEM Mini', cat: 'Video', marca: 'Blackmagic', stock: 0, status: 'Inactivo' },
+            { sku: 'LED-150', desc: 'Pantalla LED P2.6 Indoor', cat: 'Pantallas LED', marca: 'Absen', stock: 6, status: 'Activo' },
+            { sku: 'CAB-010', desc: 'Cable HDMI 15m', cat: 'Cableado', marca: 'ProLink', stock: 25, status: 'Activo' },
+            { sku: 'ACC-500', desc: 'Tripié para Cámara Manfrotto', cat: 'Accesorios', marca: 'Manfrotto', stock: 15, status: 'Activo' }
+        ];
+
+        // --- NAVIGATION LOGIC ---
+        const navLinks = document.querySelectorAll('.nav-link');
+        const contentSections = document.querySelectorAll('.main-content');
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                const targetId = link.getAttribute('data-target');
+                navLinks.forEach(nav => nav.classList.remove('active'));
+                link.classList.add('active');
+                contentSections.forEach(s => s.classList.toggle('active', s.id === targetId));
+            });
+        });
+
+        // --- DASHBOARD CHARTS ---
+        new Chart(document.getElementById('valorInventarioChart'), {
+            type: 'line',
+            data: {
+                labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Valor de Inventario (MXN)',
+                    data: [22500000, 21800000, 24000000, 23500000, 26000000, 29850000],
+                    borderColor: 'rgba(10, 88, 208, 1)',
+                    backgroundColor: 'rgba(10, 88, 208, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        new Chart(document.getElementById('inventarioCategoriaChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Audio', 'Video', 'Pantallas LED', 'Cableado', 'Accesorios'],
+                datasets: [{
+                    data: [35, 30, 15, 10, 10],
+                    backgroundColor: ['#0A58D0', '#5E8FF7', '#85ADFF', '#ADC8FF', '#D1E0FF']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        // --- CATALOGO LOGIC ---
+        const articlesTableBody = document.getElementById('articlesTableBody');
+        const searchInput = document.getElementById('searchInput');
+
+        function renderArticlesTable(data) {
+            articlesTableBody.innerHTML = '';
+            data.forEach(a => {
+                articlesTableBody.innerHTML += `
+                    <tr><td>${a.sku}</td><td>${a.desc}</td><td>${a.cat}</td><td>${a.marca}</td><td>${a.stock}</td>
+                    <td><span class="status ${a.status === 'Activo' ? 'status-active' : 'status-inactive'}">${a.status}</span></td>
+                    <td class="actions"><button title="Editar">✏️</button><button title="Eliminar">🗑️</button></td></tr>`;
+            });
+        }
+        
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = articles.filter(a => a.sku.toLowerCase().includes(term) || a.desc.toLowerCase().includes(term) || a.marca.toLowerCase().includes(term));
+            renderArticlesTable(filtered);
+        });
+
+        // --- MODAL HANDLING ---
+        const addArticleModal = document.getElementById('addArticleModal');
+        const addEntradaModal = document.getElementById('addEntradaModal');
+        const addSalidaModal = document.getElementById('addSalidaModal');
+
+        function setupModal(buttonId, modal) {
+            document.getElementById(buttonId)?.addEventListener('click', () => modal.classList.add('active'));
+            modal.querySelectorAll('.close-btn').forEach(btn => btn.addEventListener('click', () => modal.classList.remove('active')));
+        }
+        setupModal('addArticleBtn', addArticleModal);
+        setupModal('addEntradaBtn', addEntradaModal);
+        setupModal('addSalidaBtn', addSalidaModal);
+
+        // Add New Article Form Logic
+        document.getElementById('addArticleForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            let isValid = true;
+            const form = e.target;
+            const sku = form.querySelector('#sku'), desc = form.querySelector('#descripcion'), marca = form.querySelector('#marca'), cat = form.querySelector('#categoria'), stock = form.querySelector('#stock');
+            
+            [sku, desc, marca, cat, stock].forEach(input => {
+                const errorDiv = input.nextElementSibling;
+                if (!input.value.trim() || (input.type === 'number' && input.value < 0)) {
+                    errorDiv.style.display = 'block';
+                    isValid = false;
+                } else {
+                    errorDiv.style.display = 'none';
+                }
+            });
+
+            const skuError = sku.nextElementSibling;
+            if (articles.some(a => a.sku.toLowerCase() === sku.value.toLowerCase())) {
+                skuError.textContent = 'Este SKU ya existe. Debe ser único.';
+                skuError.style.display = 'block';
+                isValid = false;
+            }
+
+            if (isValid) {
+                articles.unshift({ sku: sku.value, desc: desc.value, cat: cat.value, marca: marca.value, stock: parseInt(stock.value), status: 'Activo' });
+                renderArticlesTable(articles);
+                alert(`Artículo "${desc.value}" creado con éxito.`);
+                form.reset();
+                addArticleModal.classList.remove('active');
+            }
+        });
+
+        // --- INITIAL RENDER ---
+        renderArticlesTable(articles);
+    });
+    </script>
+</body>
+</html>
